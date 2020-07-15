@@ -10,6 +10,6 @@ function onConnectionOpen(){
     console.log('Establishing Connection');
 }
 
-function onMessageRecieved(){
+function onMessageRecieved(event){
     console.log('Recieved message', event);
 }
