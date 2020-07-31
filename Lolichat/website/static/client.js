@@ -1,12 +1,25 @@
 let ws;
 let chatUsersCont = document.querySelector('#chatUsers');
 let chatusersCount = document.querySelector('#chatUsersCount');
+let sendMessageForm = document.querySelector('#messageSendForm');
+let messageInput = document.querySelector('#messageInput');
+let chatMessages = document.querySelector('#chatMessages');
 
 window.addEventListener('DOMContentLoaded', () => {
     ws = new WebSocket(`ws://localhost:3000/ws`);
     ws.addEventListener('open', onConnectionOpen);
     ws.addEventListener('message', onMessageRecieved);
-})
+});
+
+sendMessageForm.onsubmit = (e) => {
+    e.preventDefault();
+    const event = {
+        event: 'message',
+        data: messageInput.value
+    }
+    ws.send(JSON.stringify(event));
+    messageInput.value = '';
+}
 
 function onConnectionOpen(){
     console.log('Establishing Connection');
@@ -38,6 +51,15 @@ function onMessageRecieved(event){
                 user1.innerHTML = u.name;
                 chatUsersCont.appendChild(user1)
             })
+        break;
+        case 'message':
+            const messageElement = document.createElement('div');
+            messageElement.className = `message message-${event.data.sender === 'me' ? 'to' : 'from'}`
+            messageElement.innerHTML = `
+              ${event.data.sender === 'me' ? '' : `<h4>${event.data.name}</h4>`}
+              <p class="message-text"> ${event.data.message} </p>
+            `;
+            chatMessages.appendChild(messageElement)
     }
 }
 

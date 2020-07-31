@@ -5,6 +5,8 @@ const userMap = new Map();
 
 const groupsMap = new Map();
 
+const messagesMap = new Map();
+
 export default async function chat(ws){
     console.log('Connected');
     const userId = v4.generate();
@@ -19,7 +21,7 @@ export default async function chat(ws){
             groupsMap.set(user.groupName, users);
             userMap.delete(userId);
             
-            emitEvent(user.groupName);
+            emitUserList(user.groupName);
             break;
         }
         switch (event.event){
@@ -35,13 +37,22 @@ export default async function chat(ws){
                 users.push(user);
                 groupsMap.set(event.groupName, users);
 
-                emitEvent(event.groupName)
+                emitUserList(event.groupName);
+            break;
+            case 'message':
+                const userObj = userMap.get(userId);
+                const message = {
+                    userId,
+                    name: userObj.name,
+                    message: event.data
+                }
+                emitMessage(userObj.groupName, message, userId)
         }
     }
 }
 
-function emitEvent(groupName) {
-    const users = groupsMap.get(groupName);
+function emitUserList(groupName) {
+    const users = groupsMap.get(groupName) || [];
     for (const user of users){
         const event = {
             event: 'users',
@@ -59,4 +70,16 @@ function getDisplayUsers(groupName) {
             name: u.name,
         }
     })
+}
+
+function emitMessage(groupName, message, senderId) {
+    const users = groupsMap.get(groupName) || [];
+    for (const user of users){
+        message.sender = user.userId === senderId ? 'me' : senderId;
+        const event = {
+            event: 'message',
+            data: message,
+        }
+        user.ws.send(JSON.stringify(event))
+    }
 }
