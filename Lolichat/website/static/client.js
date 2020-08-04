@@ -4,6 +4,7 @@ let chatusersCount = document.querySelector('#chatUsersCount');
 let sendMessageForm = document.querySelector('#messageSendForm');
 let messageInput = document.querySelector('#messageInput');
 let chatMessages = document.querySelector('#chatMessages');
+let leaveGroup = document.querySelector('#leaveGroupBtn');
 
 window.addEventListener('DOMContentLoaded', () => {
     ws = new WebSocket(`ws://localhost:3000/ws`);
@@ -21,11 +22,19 @@ sendMessageForm.onsubmit = (e) => {
     messageInput.value = '';
 }
 
-function onConnectionOpen(){
+leaveGroup.onclick = () => {
+    const event = {
+        event: 'leave',
+    };
+    ws.send(JSON.stringify(event));
+    window.location.href = 'chat.html';
+}
+
+function onConnectionOpen() {
     console.log('Establishing Connection');
     const queryParams = getQueryParams()
     console.log(queryParams);
-    if (!queryParams.name || !queryParams.group){
+    if (!queryParams.name || !queryParams.group) {
         window.location.href = 'chat.html';
         return
     }
@@ -37,11 +46,11 @@ function onConnectionOpen(){
     ws.send(JSON.stringify(event));
 }
 
-function onMessageRecieved(event){
+function onMessageRecieved(event) {
     console.log('Recieved message', event);
     event = JSON.parse(event.data);
     console.log(event);
-    switch(event.event) {
+    switch (event.event) {
         case 'users':
             chatUsersCont.innerHTML = '';
             chatusersCount.innerHTML = event.data.length
@@ -51,23 +60,36 @@ function onMessageRecieved(event){
                 user1.innerHTML = u.name;
                 chatUsersCont.appendChild(user1)
             })
-        break;
+            break;
         case 'message':
-            const messageElement = document.createElement('div');
-            messageElement.className = `message message-${event.data.sender === 'me' ? 'to' : 'from'}`
-            messageElement.innerHTML = `
-              ${event.data.sender === 'me' ? '' : `<h4>${event.data.name}</h4>`}
-              <p class="message-text"> ${event.data.message} </p>
-            `;
-            chatMessages.appendChild(messageElement)
+            const scrollToBottom = Math.floor(chatMessages.offsetHeight + chatMessages.scrollTop) === chatMessages.scrollHeight; 
+            appendMessage(event.data);
+            if (scrollToBottom) {
+                chatMessages.scrollTop = 1000000000;
+            }
+            break;
+        case 'previousMessages':
+            event.data.forEach((m) => { 
+                appendMessage(m);
+            });
     }
 }
 
-function getQueryParams(){
+function appendMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.className = `message message-${message.sender === 'me' ? 'to' : 'from'}`
+    messageElement.innerHTML = `
+              ${message.sender === 'me' ? '' : `<h4>${message.name}</h4>`}
+              <p class="message-text"> ${message.message} </p>
+            `;
+    chatMessages.appendChild(messageElement);
+}
+
+function getQueryParams() {
     const search = window.location.search.substring(1);
     const parameters = search.split('&');
     const params = {};
-    for (const parameter of parameters){
+    for (const parameter of parameters) {
         const parts = parameter.split('=');
         params[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);
     }
